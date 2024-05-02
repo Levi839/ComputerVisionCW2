@@ -118,10 +118,11 @@ class Homography:
         return H
 
 if __name__ == "__main__":
-    
+
+    # Saman
     # Read the image files
-    img_left = # your code here
-    img_right = # your code here
+    img_left = cv2.imread('s1.jpg')
+    img_right = cv2.imread('s2.jpg')
     
     stitcher = Stitcher()
     result = stitcher.stitch(img_left, img_right, ...) # Add input arguments as you deem fit
