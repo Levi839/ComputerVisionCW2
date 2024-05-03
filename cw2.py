@@ -97,18 +97,76 @@ class Stitcher:
         return homography
     
 
-
+    ### Saman ###
     # Add input arguments as you deem fit
-    def warping(img_left, img_right, homography, ...)
-    '''
-           Warp images to create panoramic image
-        '''
+    def warping(self, img_left, img_right, homography, output_size=None):
+        """
+        Warp two images into a single panorama using a given homography matrix.
 
-    # Your code here. You will have to warp one image into another via the
-    # homography. Remember that the homography is an entity expressed in
-    # homogeneous coordinates.
+        This method calculates the necessary transformations to align and stitch two images together into a seamless panorama.
+        It first determines the boundaries of the resulting panorama by transforming the corner points of the right image
+        and combines this with the corner points of the left image.
 
-    return result
+        Parameters:
+        - img_left: The left source image.
+        - img_right: The right source image.
+        - homography: The homography matrix to transform the right image to align with the left.
+        - output_size: Optional. Specify the size of the output panorama (width, height).
+
+        Returns:
+        - The combined panorama image.
+        """
+        # Determine the size of the output panorama
+        h_left, w_left = img_left.shape[:2]
+        h_right, w_right = img_right.shape[:2]
+
+        # Corners of the left image
+        corners_left = np.array([
+            [0, 0],
+            [0, h_left - 1],
+            [w_left - 1, h_left - 1],
+            [w_left - 1, 0]
+        ], dtype=np.float32).reshape(-1, 1, 2)
+
+        # Corners of the right image
+        corners_right = np.array([
+            [0, 0],
+            [0, h_right - 1],
+            [w_right - 1, h_right - 1],
+            [w_right - 1, 0]
+        ], dtype=np.float32).reshape(-1, 1, 2)
+
+        # Warp the corners of the right image to get the size of the output panorama
+        warped_corners_right = cv2.perspectiveTransform(corners_right, homography)
+        all_corners = np.concatenate((corners_left, warped_corners_right), axis=0)
+
+        # Calculate the dimensions of the output panorama
+        [x_min, y_min] = np.int32(all_corners.min(axis=0).ravel() - 0.5)
+        [x_max, y_max] = np.int32(all_corners.max(axis=0).ravel() + 0.5)
+
+        # Translate the homography to adjust for shifts caused by warping
+        translation_dist = [-x_min, -y_min]
+        H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
+
+        # Warp the right image using the composite homography
+        output_img_size = (x_max - x_min, y_max - y_min)
+        warped_image = cv2.warpPerspective(img_right, H_translation.dot(homography), output_img_size)
+        cv2.imshow("Warped Right Image", warped_image)
+        cv2.waitKey(0)
+
+        # Overlay the left image onto the panorama
+        # Instead of directly copying, we now check each pixel (inefficient but clear for debugging)
+        for y in range(h_left):
+            for x in range(w_left):
+                if 0 <= x + translation_dist[0] < output_img_size[0] and 0 <= y + translation_dist[1] < output_img_size[
+                    1]:
+                    warped_image[y + translation_dist[1], x + translation_dist[0]] = img_left[y, x]
+        cv2.imshow("Overlayed Left on Warped Right", warped_image)
+        cv2.waitKey(0)
+
+        return warped_image
+    # return result
+    
 
     def remove_black_border(self, img):
         '''
@@ -178,7 +236,7 @@ class Blender:
         return img1
         # return customised_blending_img
 
-### Saman ###
+
 class Homography:
     def solve_homography(self, S, D):
         '''
