@@ -126,11 +126,37 @@ class Blender:
     
         # return linear_blending_img
 
-    def customised_blending(self, ...):
-        '''
-        Customised blending of your choice
-        '''
-        return customised_blending_img
+    ### Saman ###
+    def customised_blending(self, img1, img2, start_blend, end_blend):
+        """
+        Perform custom blending using a sigmoidal curve for smooth transition between two images.
+
+        Parameters:
+        img1 (np.array): The first image where the blending is applied; this image is modified in-place.
+        img2 (np.array): The second image used for blending.
+        start_blend (int): The column index to start blending.
+        end_blend (int): The column index to end blending.
+
+        Returns:
+        np.array: The modified first image with blended region from the second image.
+        """
+
+        # Calculate the width of the blending zone
+        blend_width = end_blend - start_blend
+
+        # Iterate over each column within the blending zone
+        for col in range(start_blend, end_blend):
+            # Calculate the alpha value using a sigmoidal function to achieve a smooth transition
+            # The sigmoid function shifts from 0 to 1 across the blend width, centered at the midpoint
+            alpha = 1 / (1 + np.exp(-10 * ((col - start_blend) / blend_width - 0.5)))
+
+            # Blend the current column of img1 and img2 using the calculated alpha
+            # cv2.addWeighted performs per-element weighted sum of two arrays
+            img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
+
+        # Return the modified image with blended regions
+        return img1
+        # return customised_blending_img
 
 
 class Homography:
