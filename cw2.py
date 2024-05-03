@@ -35,6 +35,7 @@ class Stitcher:
 
         return result
 
+    ### Levi ###
     def compute_descriptors(self, img):
         '''
         The feature detector and descriptor
@@ -96,13 +97,34 @@ class Stitcher:
         return cropped_image
 
 
+### Saman ###
 class Blender:
-    def linear_blending(self, ...):
-        '''
-        linear blending (also known as feathering)
-        '''
+    def linear_blending(self, img1, img2, start_blend, end_blend):
+        """
+        Linear blending (also known as feathering) across the overlap of two images.
 
-        return linear_blending_img
+        Parameters:
+        img1 (np.array): The first image in which the blend will be applied.
+        img2 (np.array): The second image from which pixels will be used in the blend.
+        start_blend (int): Start column index for blending in the images.
+        end_blend (int): End column index for blending in the images.
+        
+        Returns:
+        np.array: The first image with the blended region modified.
+        """
+
+        # Calculate the width of the blending zone
+        blend_width = end_blend - start_blend
+
+        # Perform blending from start_blend to end_blend
+        for col in range(start_blend, end_blend):
+                alpha = (col - start_blend) / blend_width # Calculate the blend factor for the current column
+                # Update img1's column with a weighted sum of img1's and img2's columns
+                img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
+
+        return img1 # Return the modified first image
+    
+        # return linear_blending_img
 
     def customised_blending(self, ...):
         '''
@@ -125,7 +147,7 @@ class Homography:
 
 if __name__ == "__main__":
 
-    # Saman
+    ### Saman ###
     # Read the image files
     img_left = cv2.imread('s1.jpg')
     img_right = cv2.imread('s2.jpg')
