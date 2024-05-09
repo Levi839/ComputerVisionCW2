@@ -9,7 +9,7 @@ Repo for Computer Visions coursework 2
 
 4. Robust homography computation (10 marks)  # Saman #
 
-5. Image stitching via homography (20 marks)   # Saman & Levi #
+5. Image stitching via homography (20 marks)   # Bob #
 
 6. Image blending (20 marks)   # Saman #
 
