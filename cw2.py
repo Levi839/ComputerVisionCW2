@@ -236,7 +236,7 @@ class Blender:
         return img1
         # return customised_blending_img
 
-
+## Bob ##
 class Homography:
     def solve_homography(self, S, D):
         '''
