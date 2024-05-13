@@ -40,10 +40,12 @@ class Stitcher:
         '''
         The feature detector and descriptor
         '''
+        #Surf keypoint detection
+        grey_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        surf = cv2.xfeatures2d.SURF_create()
+        keypoints_surf, descriptors_surf = surf.detectANDCompute(img,None)
 
-        # Your code here
-
-        return keypoints, features
+        return keypoints_surf, descriptors_surf
 
     def matching(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ...):
         # Add input arguments as you deem fit
