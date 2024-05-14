@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 
-
 class Stitcher:
     def __init__(self):
         pass
@@ -201,35 +200,23 @@ class Blender:
 ## Bob ##
 class Homography:
     def solve_homography(self, S, D):
-        '''
-        Find the homography matrix between a set of S points and a set of
-        D points
-        '''
-
-        #construct homogeneous coordinate representation
-        S_homogeneous = np.hstack((S, np.ones((len(S), 1))))
-        D_homogeneous = np.hstack((S, np.ones((len(D), 1))))
-
-        #Formulate the linear equation system
+        """
+        This method compute the homography matrix using Direct Linear Transformation (DLT).
+        S and D are lists of corresponding points (source and destination).
+        """
         A = []
-        for i in range(len(S)):
-            x, y, _ = S_homogeneous[i]
-            u, v, _ = D_homogeneous[i]
-            A.append([-x, -y, -1, 0, 0, 0, u*x, u*y, u])
-            A.append([0, 0, 0, -x, -y, -1, v*x, v*y, v])
-        
+        for si, di in zip(S, D):
+            x, y = si[0], si[1]
+            u, v = di[0], di[1]
+            A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
+            A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
         A = np.array(A)
-
-        # Solve linear equation system using SVD
         _, _, V = np.linalg.svd(A)
         H = V[-1].reshape(3, 3)
-        # Your code here. You might want to use the DLT algorithm developed in cw1.
-
-        return H
+        return H / H[2, 2]  # Normalise to make h33 = 1
 
 
 if __name__ == "__main__":
-
     ### Saman ###
     # Read the image files
     img_left = cv2.imread('s1.jpg')
@@ -237,7 +224,6 @@ if __name__ == "__main__":
     stitcher = Stitcher()
     result = stitcher.stitch(img_left, img_right, ...)
     
-
     # show the result
     cv2.imshow('result', result)
     cv2.waitKey(0)
