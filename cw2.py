@@ -40,10 +40,12 @@ class Stitcher:
         '''
         The feature detector and descriptor
         '''
+        #Surf keypoint detection
+        grey_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        surf = cv2.xfeatures2d.SURF_create()
+        keypoints_surf, descriptors_surf = surf.detectANDCompute(img,None)
 
-        # Your code here
-
-        return keypoints, features
+        return keypoints_surf, descriptors_surf
 
     def matching(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ...):
         # Add input arguments as you deem fit
@@ -86,19 +88,15 @@ class Stitcher:
         - homography: The 3x3 homography matrix.
         - mask: Mask of inliers used to compute the homography.
         """
-        # Extract the positions of the matched keypoints from both images
         points_l = np.float32([keypoints_l[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
         points_r = np.float32([keypoints_r[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 
-        # Calculate the homography matrix using RANSAC method from OpenCV
-        # This method automatically filters out outliers based on reprojection error
         homography, mask = cv2.findHomography(points_r, points_l, cv2.RANSAC, reproj_threshold, maxIters=iterations)
         # Return the computed homography matrix and the inliers mask
         return homography
     
 
     ### Saman ###
-    # Add input arguments as you deem fit
     def warping(self, img_left, img_right, homography, output_size=None):
         """
         Warp two images into a single panorama using a given homography matrix.
@@ -116,46 +114,30 @@ class Stitcher:
         Returns:
         - The combined panorama image.
         """
-        # Determine the size of the output panorama
         h_left, w_left = img_left.shape[:2]
         h_right, w_right = img_right.shape[:2]
-
-        # Corners of the left image
         corners_left = np.array([
             [0, 0],
             [0, h_left - 1],
             [w_left - 1, h_left - 1],
             [w_left - 1, 0]
         ], dtype=np.float32).reshape(-1, 1, 2)
-
-        # Corners of the right image
         corners_right = np.array([
             [0, 0],
             [0, h_right - 1],
             [w_right - 1, h_right - 1],
             [w_right - 1, 0]
         ], dtype=np.float32).reshape(-1, 1, 2)
-
-        # Warp the corners of the right image to get the size of the output panorama
         warped_corners_right = cv2.perspectiveTransform(corners_right, homography)
         all_corners = np.concatenate((corners_left, warped_corners_right), axis=0)
-
-        # Calculate the dimensions of the output panorama
         [x_min, y_min] = np.int32(all_corners.min(axis=0).ravel() - 0.5)
         [x_max, y_max] = np.int32(all_corners.max(axis=0).ravel() + 0.5)
-
-        # Translate the homography to adjust for shifts caused by warping
         translation_dist = [-x_min, -y_min]
         H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
-
-        # Warp the right image using the composite homography
         output_img_size = (x_max - x_min, y_max - y_min)
         warped_image = cv2.warpPerspective(img_right, H_translation.dot(homography), output_img_size)
         cv2.imshow("Warped Right Image", warped_image)
         cv2.waitKey(0)
-
-        # Overlay the left image onto the panorama
-        # Instead of directly copying, we now check each pixel (inefficient but clear for debugging)
         for y in range(h_left):
             for x in range(w_left):
                 if 0 <= x + translation_dist[0] < output_img_size[0] and 0 <= y + translation_dist[1] < output_img_size[
@@ -165,9 +147,7 @@ class Stitcher:
         cv2.waitKey(0)
 
         return warped_image
-    # return result
     
-
     def remove_black_border(self, img):
         '''
         Remove black border after stitching
@@ -190,19 +170,13 @@ class Blender:
         Returns:
         np.array: The first image with the blended region modified.
         """
-
-        # Calculate the width of the blending zone
         blend_width = end_blend - start_blend
-
-        # Perform blending from start_blend to end_blend
         for col in range(start_blend, end_blend):
                 alpha = (col - start_blend) / blend_width # Calculate the blend factor for the current column
                 # Update img1's column with a weighted sum of img1's and img2's columns
                 img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
 
         return img1 # Return the modified first image
-    
-        # return linear_blending_img
 
     ### Saman ###
     def customised_blending(self, img1, img2, start_blend, end_blend):
@@ -218,23 +192,11 @@ class Blender:
         Returns:
         np.array: The modified first image with blended region from the second image.
         """
-
-        # Calculate the width of the blending zone
         blend_width = end_blend - start_blend
-
-        # Iterate over each column within the blending zone
         for col in range(start_blend, end_blend):
-            # Calculate the alpha value using a sigmoidal function to achieve a smooth transition
-            # The sigmoid function shifts from 0 to 1 across the blend width, centered at the midpoint
             alpha = 1 / (1 + np.exp(-10 * ((col - start_blend) / blend_width - 0.5)))
-
-            # Blend the current column of img1 and img2 using the calculated alpha
-            # cv2.addWeighted performs per-element weighted sum of two arrays
             img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
-
-        # Return the modified image with blended regions
         return img1
-        # return customised_blending_img
 
 ## Bob ##
 class Homography:
@@ -272,9 +234,7 @@ if __name__ == "__main__":
     # Read the image files
     img_left = cv2.imread('s1.jpg')
     img_right = cv2.imread('s2.jpg')
-
     stitcher = Stitcher()
-    # Add input arguments as you deem fit
     result = stitcher.stitch(img_left, img_right, ...)
     
 
