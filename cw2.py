@@ -158,17 +158,12 @@ class Homography:
 
 
 if __name__ == "__main__":
-
-    ### Saman ###
-    # Read the image files
+    ### Saman ####
     img_left = cv2.imread('s1.jpg')
     img_right = cv2.imread('s2.jpg')
-
     stitcher = Stitcher()
-    # Add input arguments as you deem fit
-    result = stitcher.stitch(img_left, img_right, ...)
-
-    # show the result
-    cv2.imshow('result', result)
+    final_result = stitcher.stitch(img_left, img_right, match_threshold=0.75, ransac_iterations=1000,
+                                   ransac_threshold=5.0, blend_mode='linear')
+    cv2.imshow('Final Stitched Image without Black Border', final_result)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
