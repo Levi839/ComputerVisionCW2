@@ -5,10 +5,11 @@ class Stitcher:
     def __init__(self):
         pass
 
-    def stitch(self, img_left, img_right, ...):  # Add input arguments as you deem fit
-        '''
-            The main method for stitching two images
-        '''
+    def stitch(self, img_left, img_right, match_threshold=0.75, ransac_iterations=1000, ransac_threshold=5.0,
+               panorama_size=None, blend_mode='linear'):
+        """
+        The main method for stitching two images
+        """
 
         # Step 1 - extract the keypoints and features with a suitable feature
         # detector and descriptor
@@ -17,22 +18,30 @@ class Stitcher:
 
         # Step 2 - Feature matching. You will have to apply a selection technique
         # to choose the best matches
-        matches = self.matching(keypoints_l, keypoints_r,
-                                descriptors_l, descriptors_r, ...)  # Add input arguments as you deem fit
-
+        matches = self.matching(keypoints_l, keypoints_r, descriptors_l, descriptors_r, match_threshold)
         print("Number of matching correspondences selected:", len(matches))
 
         # Step 3 - Draw the matches connected by lines
-        self.draw_matches(img_left, img_right, matches)
+        self.draw_matches(img_left, keypoints_l, img_right, keypoints_r, matches)
 
         # Step 4 - fit the homography model with the RANSAC algorithm
-        homography = self.find_homography(matches)
+        homography = self.find_homography(matches, keypoints_l, keypoints_r, ransac_iterations, ransac_threshold)
 
         # Step 5 - Warp images to create the panoramic image
-        # Add input arguments as you deem fit
-        result = self.warping(img_left, img_right, homography, ...)
+        result_with_black_borders = self.warping(img_left, img_right, homography, panorama_size)
 
+        # Display the image with black borders before blending and removing them
+        cv2.imshow('Stitched Image with Black Borders', result_with_black_borders)
+        cv2.waitKey(0)
+
+        # Optional Step 6 - Blend images using the selected mode
+        if blend_mode == 'linear':
+            result = self.blend_images(result_with_black_borders, img_left, img_right, homography)
+
+        # Optional Step 7 - Remove black borders from the final image
+        result = self.remove_black_border(result)
         return result
+    
 
     ### Levi ###
     def compute_descriptors(self, img):
