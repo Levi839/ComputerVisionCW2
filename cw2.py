@@ -77,8 +77,7 @@ class Stitcher:
         cv2.waitKey(0)
 
     ### Bob ###
-        def find_homography(self, matches, keypoints_l, keypoints_r, iterations=1000, reproj_threshold=5.0):
-         """
+        """
         Fit the best homography model with the RANSAC algorithm.
 
         """
