@@ -66,35 +66,12 @@ class Stitcher:
         cv2.imshow('correspondences', img_with_correspondences)
         cv2.waitKey(0)
 
-    ### Saman ###
+    ### Bob ###
         def find_homography(self, matches, keypoints_l, keypoints_r, iterations=1000, reproj_threshold=5.0):
          """
         Fit the best homography model with the RANSAC algorithm.
-
-        This function calculates a homography matrix that aligns keypoints from two images using
-        the RANSAC method to robustly handle outliers. This is particularly useful in applications
-        such as image stitching where precise alignment is crucial.
-
-        Parameters:
-        - matches: List of cv2.DMatch objects representing the matches between keypoints.
-        - keypoints_l: List of cv2.KeyPoint objects for the left image's keypoints.
-        - keypoints_r: List of cv2.KeyPoint objects for the right image's keypoints.
-        - iterations: Number of RANSAC iterations to perform.
-        - reproj_threshold: Maximum allowed reprojection error to treat a point pair as an inlier.
-
-        Returns:
-        - homography: The 3x3 homography matrix.
-        - mask: Mask of inliers used to compute the homography.
         """
-        # Extract the positions of the matched keypoints from both images
-        points_l = np.float32([keypoints_l[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
-        points_r = np.float32([keypoints_r[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
-
-        # Calculate the homography matrix using RANSAC method from OpenCV
-        # This method automatically filters out outliers based on reprojection error
-        homography, mask = cv2.findHomography(points_r, points_l, cv2.RANSAC, reproj_threshold, maxIters=iterations)
-        # Return the computed homography matrix and the inliers mask
-        return homography
+       
     
 
     ### Saman ###
