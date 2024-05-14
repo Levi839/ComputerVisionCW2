@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
 
+
 class Stitcher:
     def __init__(self):
-        pass
+        self.homography_solver = self.Homography()
 
     def stitch(self, img_left, img_right, match_threshold=0.75, ransac_iterations=1000, ransac_threshold=5.0,
                panorama_size=None, blend_mode='linear'):
@@ -30,7 +31,6 @@ class Stitcher:
         # Step 5 - Warp images to create the panoramic image
         result_with_black_borders = self.warping(img_left, img_right, homography, panorama_size)
 
-        ### Saman ###
         # Display the image with black borders before blending and removing them
         cv2.imshow('Stitched Image with Black Borders', result_with_black_borders)
         cv2.waitKey(0)
@@ -42,47 +42,50 @@ class Stitcher:
         # Optional Step 7 - Remove black borders from the final image
         result = self.remove_black_border(result)
         return result
-    
 
-    ### Levi ###
+    # Levi #
     def compute_descriptors(self, img):
-        '''
+        """
         The feature detector and descriptor
-        '''
-        #Surf keypoint detection
-        grey_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        surf = cv2.xfeatures2d.SURF_create()
-        keypoints_surf, descriptors_surf = surf.detectANDCompute(img,None)
+        """
+        sift = cv2.SIFT_create()
+        keypoints, features = sift.detectAndCompute(img, None)
+        return keypoints, features
 
-        return keypoints_surf, descriptors_surf
-
-    def matching(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ...):
+    # Levi #
+    def matching(self,keypoints_l, keypoints_r, descriptors_l, descriptors_r,match_threshold):
         # Add input arguments as you deem fit
         '''
             Find the matching correspondences between the two images
         '''
+        matches = []
+        for k1, desc_l in enumerate(descriptors_l):
+            distances = []
+            for k2, desc_r in enumerate(descriptors_r):
+                eucli_distance = np.linalg.norm(desc_l - desc_r)
+                distances.append((eucli_distance, k2))
 
-        # Your code here. You should also implement a step to select good matches.
+            distances.sort(key=lambda x: x[0])
 
-        return good_matches
+            if len(distances) >= 2 and distances[0][0] < match_threshold * distances[1][0]:
+                matches.append(cv2.DMatch(_queryIdx=k1, _trainIdx=distances[0][1], _distance=distances[0][0]))
 
-    def draw_matches(self, img_left, img_right, matches):
+        return matches
+
+    # Levi #
+    def draw_matches(self, img_left, keypoints_l, img_right, keypoints_r, matches):
         '''
             Connect correspondences between images with lines and draw these
-            lines 
+            lines
         '''
-
         # Your code here
-
-        cv2.imshow('correspondences', img_with_correspondences)
+        # Draw matches
+        img_with_correspondences = cv2.drawMatches(img_left, keypoints_l, img_right, keypoints_r, matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        cv2.imshow('Correspondences', img_with_correspondences)
         cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-    ### Bob ###
-        """
-        Fit the best homography model with the RANSAC algorithm.
-
-        """
-        
+    # Bob #
     def find_homography(self, matches, keypoints_l, keypoints_r, iterations=1000, reproj_threshold=5.0):
         # Fit the best homography model with the RANSAC algorithm using custom implementation.
         points_l = np.float32([keypoints_l[m.queryIdx].pt for m in matches]).reshape(-1, 2)
@@ -103,7 +106,7 @@ class Stitcher:
                 best_H = H
         return best_H
 
-    ### Bob ###
+    # Bob #
     def apply_homography(self, points, H):
         # Apply homography matrix H to a set of points
         num_points = points.shape[0]
@@ -111,7 +114,7 @@ class Stitcher:
         transformed_points_homog = np.dot(H, points_homog.T).T
         transformed_points = transformed_points_homog[:, :2] / transformed_points_homog[:, 2][:, np.newaxis]
         return transformed_points
-        
+
     # Saman #
     def blend_images(self, panorama, img_left, img_right, homography, blend_mode='linear'):
         # Blend the warped right image with the left image using the specified blending mode.
@@ -131,60 +134,83 @@ class Stitcher:
         else:
             return panorama
 
-    ### Saman ###
+    # Saman #
     def warping(self, img_left, img_right, homography, output_size=None):
         """
-        Warp two images into a single panorama using a given homography matrix.
+        Manually warp the right image using a provided homography matrix and combine it with the left image.
+
+        Returns:
+        - The combined panorama image.
         """
-    
-    ### Saman ###
+        h_left, w_left = img_left.shape[:2]
+        h_right, w_right = img_right.shape[:2]
+        panorama_width = w_left + w_right
+        panorama_height = max(h_left, h_right)
+        panorama = np.zeros((panorama_height, panorama_width, 3), dtype=img_left.dtype)
+        panorama[0:h_left, 0:w_left] = img_left
+        for y in range(h_right):
+            for x in range(w_right):
+                homog_coords = np.dot(homography, np.array([x, y, 1]))
+                homog_coords /= homog_coords[2]  # Normalise to convert from homogeneous to Cartesian coordinates
+                x_p, y_p = int(homog_coords[0]), int(homog_coords[1])
+                if 0 <= x_p < panorama_width and 0 <= y_p < panorama_height:
+                    panorama[y_p, x_p] = img_right[y, x]
+        return panorama
+
+    # Saman #
     def remove_black_border(self, img):
-        '''
-        Remove black border after stitching
-        '''
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            img = img[y:y + h, x:x + w]
+        return img
 
+    # Saman #
+    class Blender:
+        def linear_blending(self, panorama, img, start_blend, end_blend):
+            blend_width = end_blend - start_blend
+            for col in range(start_blend, end_blend):
+                alpha = (col - start_blend) / float(blend_width)
+                panorama[:, col] = cv2.addWeighted(panorama[:, col], 1 - alpha, img[:, col], alpha, 0)
+            return panorama
 
-### Saman ###
-class Blender:
-    def linear_blending(self, img1, img2, start_blend, end_blend):
-        """
-        Linear blending (also known as feathering) across the overlap of two images.
-        """
+        # Saman #
+        def customised_blending(self, panorama, img, start_blend, end_blend):
+            blend_width = end_blend - start_blend
+            for col in range(start_blend, end_blend):
+                alpha = 1 / (1 + np.exp(-10 * ((col - start_blend) / blend_width - 0.5)))
+                panorama[:, col] = cv2.addWeighted(panorama[:, col], 1 - alpha, img[:, col], alpha, 0)
+            return panorama
 
-    ### Saman ###
-    def customised_blending(self, img1, img2, start_blend, end_blend):
-        """
-        Perform custom blending using a sigmoidal curve for smooth transition between two images.
-        """
-
-## Bob ##
-class Homography:
-    def solve_homography(self, S, D):
-        """
-        This method compute the homography matrix using Direct Linear Transformation (DLT).
-        S and D are lists of corresponding points (source and destination).
-        """
-        A = []
-        for si, di in zip(S, D):
-            x, y = si[0], si[1]
-            u, v = di[0], di[1]
-            A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
-            A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
-        A = np.array(A)
-        _, _, V = np.linalg.svd(A)
-        H = V[-1].reshape(3, 3)
-        return H / H[2, 2]  # Normalise to make h33 = 1
+    # Bob #
+    class Homography:
+        def solve_homography(self, S, D):
+            """
+            Compute the homography matrix using Direct Linear Transformation (DLT).
+            S and D are lists of corresponding points (source and destination).
+            """
+            A = []
+            for si, di in zip(S, D):
+                x, y = si[0], si[1]
+                u, v = di[0], di[1]
+                A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
+                A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
+            A = np.array(A)
+            _, _, V = np.linalg.svd(A)
+            H = V[-1].reshape(3, 3)
+            return H / H[2, 2]  # Normalise last element to 1
 
 
 if __name__ == "__main__":
-    ### Saman ###
-    # Read the image files
+    # Saman #
     img_left = cv2.imread('s1.jpg')
     img_right = cv2.imread('s2.jpg')
     stitcher = Stitcher()
-    result = stitcher.stitch(img_left, img_right, ...)
-    
-    # show the result
-    cv2.imshow('result', result)
+    final_result = stitcher.stitch(img_left, img_right, match_threshold=0.75, ransac_iterations=1000,
+                                   ransac_threshold=5.0, blend_mode='linear')
+    cv2.imshow('Final Stitched Image without Black Border', final_result)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
