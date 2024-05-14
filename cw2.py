@@ -128,65 +128,21 @@ class Stitcher:
 
 
 ### Saman ###
-class Blender:
-    def linear_blending(self, img1, img2, start_blend, end_blend):
-        """
-        Linear blending (also known as feathering) across the overlap of two images.
+    class Blender:
+        def linear_blending(self, panorama, img, start_blend, end_blend):
+            blend_width = end_blend - start_blend
+            for col in range(start_blend, end_blend):
+                alpha = (col - start_blend) / float(blend_width)
+                panorama[:, col] = cv2.addWeighted(panorama[:, col], 1 - alpha, img[:, col], alpha, 0)
+            return panorama
 
-        Parameters:
-        img1 (np.array): The first image in which the blend will be applied.
-        img2 (np.array): The second image from which pixels will be used in the blend.
-        start_blend (int): Start column index for blending in the images.
-        end_blend (int): End column index for blending in the images.
-        
-        Returns:
-        np.array: The first image with the blended region modified.
-        """
-
-        # Calculate the width of the blending zone
-        blend_width = end_blend - start_blend
-
-        # Perform blending from start_blend to end_blend
-        for col in range(start_blend, end_blend):
-                alpha = (col - start_blend) / blend_width # Calculate the blend factor for the current column
-                # Update img1's column with a weighted sum of img1's and img2's columns
-                img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
-
-        return img1 # Return the modified first image
-    
-        # return linear_blending_img
-
-    ### Saman ###
-    def customised_blending(self, img1, img2, start_blend, end_blend):
-        """
-        Perform custom blending using a sigmoidal curve for smooth transition between two images.
-
-        Parameters:
-        img1 (np.array): The first image where the blending is applied; this image is modified in-place.
-        img2 (np.array): The second image used for blending.
-        start_blend (int): The column index to start blending.
-        end_blend (int): The column index to end blending.
-
-        Returns:
-        np.array: The modified first image with blended region from the second image.
-        """
-
-        # Calculate the width of the blending zone
-        blend_width = end_blend - start_blend
-
-        # Iterate over each column within the blending zone
-        for col in range(start_blend, end_blend):
-            # Calculate the alpha value using a sigmoidal function to achieve a smooth transition
-            # The sigmoid function shifts from 0 to 1 across the blend width, centered at the midpoint
-            alpha = 1 / (1 + np.exp(-10 * ((col - start_blend) / blend_width - 0.5)))
-
-            # Blend the current column of img1 and img2 using the calculated alpha
-            # cv2.addWeighted performs per-element weighted sum of two arrays
-            img1[:, col] = cv2.addWeighted(img1[:, col], 1 - alpha, img2[:, col], alpha, 0)
-
-        # Return the modified image with blended regions
-        return img1
-        # return customised_blending_img
+        # Saman #
+        def customised_blending(self, panorama, img, start_blend, end_blend):
+            blend_width = end_blend - start_blend
+            for col in range(start_blend, end_blend):
+                alpha = 1 / (1 + np.exp(-10 * ((col - start_blend) / blend_width - 0.5)))
+                panorama[:, col] = cv2.addWeighted(panorama[:, col], 1 - alpha, img[:, col], alpha, 0)
+            return panorama
 
 
 class Homography:
