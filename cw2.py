@@ -30,7 +30,7 @@ class Stitcher:
 
         # Step 5 - Warp images to create the panoramic image
         result_with_black_borders = self.warping(img_left, img_right, homography, panorama_size)
-
+        ### Saman ###
         # Display the image with black borders before blending and removing them
         cv2.imshow('Stitched Image with Black Borders', result_with_black_borders)
         cv2.waitKey(0)
