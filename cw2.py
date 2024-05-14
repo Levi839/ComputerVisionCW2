@@ -81,7 +81,7 @@ class Stitcher:
         Fit the best homography model with the RANSAC algorithm.
 
         """
-        # Bob #
+        
     def find_homography(self, matches, keypoints_l, keypoints_r, iterations=1000, reproj_threshold=5.0):
         # Fit the best homography model with the RANSAC algorithm using custom implementation.
         points_l = np.float32([keypoints_l[m.queryIdx].pt for m in matches]).reshape(-1, 2)
@@ -102,7 +102,7 @@ class Stitcher:
                 best_H = H
         return best_H
 
-    # Bob #
+    ### Bob ###
     def apply_homography(self, points, H):
         # Apply homography matrix H to a set of points
         num_points = points.shape[0]
