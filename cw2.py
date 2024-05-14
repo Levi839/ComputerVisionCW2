@@ -115,11 +115,16 @@ class Stitcher:
         return panorama
     
 
+    ### Saman ####
     def remove_black_border(self, img):
-        '''
-        Remove black border after stitching
-        '''
-        return cropped_image
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            img = img[y:y + h, x:x + w]
+        return img
 
 
 ### Saman ###
