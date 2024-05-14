@@ -92,74 +92,27 @@ class Stitcher:
             return panorama
 
     ### Saman ###
-    # Add input arguments as you deem fit
     def warping(self, img_left, img_right, homography, output_size=None):
         """
-        Warp two images into a single panorama using a given homography matrix.
-
-        This method calculates the necessary transformations to align and stitch two images together into a seamless panorama.
-        It first determines the boundaries of the resulting panorama by transforming the corner points of the right image
-        and combines this with the corner points of the left image.
-
-        Parameters:
-        - img_left: The left source image.
-        - img_right: The right source image.
-        - homography: The homography matrix to transform the right image to align with the left.
-        - output_size: Optional. Specify the size of the output panorama (width, height).
+        Manually warp the right image using a provided homography matrix and combine it with the left image.
 
         Returns:
         - The combined panorama image.
         """
-        # Determine the size of the output panorama
         h_left, w_left = img_left.shape[:2]
         h_right, w_right = img_right.shape[:2]
-
-        # Corners of the left image
-        corners_left = np.array([
-            [0, 0],
-            [0, h_left - 1],
-            [w_left - 1, h_left - 1],
-            [w_left - 1, 0]
-        ], dtype=np.float32).reshape(-1, 1, 2)
-
-        # Corners of the right image
-        corners_right = np.array([
-            [0, 0],
-            [0, h_right - 1],
-            [w_right - 1, h_right - 1],
-            [w_right - 1, 0]
-        ], dtype=np.float32).reshape(-1, 1, 2)
-
-        # Warp the corners of the right image to get the size of the output panorama
-        warped_corners_right = cv2.perspectiveTransform(corners_right, homography)
-        all_corners = np.concatenate((corners_left, warped_corners_right), axis=0)
-
-        # Calculate the dimensions of the output panorama
-        [x_min, y_min] = np.int32(all_corners.min(axis=0).ravel() - 0.5)
-        [x_max, y_max] = np.int32(all_corners.max(axis=0).ravel() + 0.5)
-
-        # Translate the homography to adjust for shifts caused by warping
-        translation_dist = [-x_min, -y_min]
-        H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
-
-        # Warp the right image using the composite homography
-        output_img_size = (x_max - x_min, y_max - y_min)
-        warped_image = cv2.warpPerspective(img_right, H_translation.dot(homography), output_img_size)
-        cv2.imshow("Warped Right Image", warped_image)
-        cv2.waitKey(0)
-
-        # Overlay the left image onto the panorama
-        # Instead of directly copying, we now check each pixel (inefficient but clear for debugging)
-        for y in range(h_left):
-            for x in range(w_left):
-                if 0 <= x + translation_dist[0] < output_img_size[0] and 0 <= y + translation_dist[1] < output_img_size[
-                    1]:
-                    warped_image[y + translation_dist[1], x + translation_dist[0]] = img_left[y, x]
-        cv2.imshow("Overlayed Left on Warped Right", warped_image)
-        cv2.waitKey(0)
-
-        return warped_image
-    # return result
+        panorama_width = w_left + w_right
+        panorama_height = max(h_left, h_right)
+        panorama = np.zeros((panorama_height, panorama_width, 3), dtype=img_left.dtype)
+        panorama[0:h_left, 0:w_left] = img_left
+        for y in range(h_right):
+            for x in range(w_right):
+                homog_coords = np.dot(homography, np.array([x, y, 1]))
+                homog_coords /= homog_coords[2]  # Normalise to convert from homogeneous to Cartesian coordinates
+                x_p, y_p = int(homog_coords[0]), int(homog_coords[1])
+                if 0 <= x_p < panorama_width and 0 <= y_p < panorama_height:
+                    panorama[y_p, x_p] = img_right[y, x]
+        return panorama
     
 
     def remove_black_border(self, img):
