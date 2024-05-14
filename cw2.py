@@ -72,7 +72,24 @@ class Stitcher:
         Fit the best homography model with the RANSAC algorithm.
         """
        
-    
+    # Saman #
+    def blend_images(self, panorama, img_left, img_right, homography, blend_mode='linear'):
+        # Blend the warped right image with the left image using the specified blending mode.
+        h_left, w_left = img_left.shape[:2]
+        h_right, w_right = img_right.shape[:2]
+        inv_homography = np.linalg.inv(homography)
+        top_left = np.dot(inv_homography, np.array([0, 0, 1]))
+        top_left /= top_left[2]
+        bottom_right = np.dot(inv_homography, np.array([w_right, h_right, 1]))
+        bottom_right /= bottom_right[2]
+        start_blend = int(max(0, top_left[0]))
+        end_blend = int(min(w_left, bottom_right[0]))
+        if blend_mode == 'linear':
+            return self.Blender().linear_blending(panorama, img_left, start_blend, end_blend)
+        elif blend_mode == 'custom':
+            return self.Blender().customised_blending(panorama, img_left, start_blend, end_blend)
+        else:
+            return panorama
 
     ### Saman ###
     # Add input arguments as you deem fit
