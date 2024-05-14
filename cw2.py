@@ -82,6 +82,35 @@ class Stitcher:
         Fit the best homography model with the RANSAC algorithm.
 
         """
+        # Bob #
+    def find_homography(self, matches, keypoints_l, keypoints_r, iterations=1000, reproj_threshold=5.0):
+        # Fit the best homography model with the RANSAC algorithm using custom implementation.
+        points_l = np.float32([keypoints_l[m.queryIdx].pt for m in matches]).reshape(-1, 2)
+        points_r = np.float32([keypoints_r[m.trainIdx].pt for m in matches]).reshape(-1, 2)
+        best_H = None
+        max_inliers = 0
+        for _ in range(iterations):
+            indices = np.random.choice(len(matches), 4, replace=False)
+            src_points = points_r[indices]
+            dst_points = points_l[indices]
+            H = self.homography_solver.solve_homography(src_points, dst_points)
+            projected_points = self.apply_homography(points_r, H)
+            errors = np.linalg.norm(points_l - projected_points, axis=1)
+            inliers = errors < reproj_threshold
+            num_inliers = np.sum(inliers)
+            if num_inliers > max_inliers:
+                max_inliers = num_inliers
+                best_H = H
+        return best_H
+
+    # Bob #
+    def apply_homography(self, points, H):
+        # Apply homography matrix H to a set of points
+        num_points = points.shape[0]
+        points_homog = np.hstack((points, np.ones((num_points, 1))))
+        transformed_points_homog = np.dot(H, points_homog.T).T
+        transformed_points = transformed_points_homog[:, :2] / transformed_points_homog[:, 2][:, np.newaxis]
+        return transformed_points
         
     # Saman #
     def blend_images(self, panorama, img_left, img_right, homography, blend_mode='linear'):
