@@ -162,6 +162,7 @@ class Stitcher:
         return panorama
 
     # Saman #
+
     def remove_black_border(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
